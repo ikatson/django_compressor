@@ -220,6 +220,8 @@ class Compressor(object):
                 '\n'.join((c.encode(self.charset) for c in rendered_content)))
             finished_content = self.handle_output(mode, filtered_content, forced)
             verbatim_content.append(finished_content)
+        elif rendered_content:
+            verbatim_content.append('\n'.join(rendered_content))
 
         if verbatim_content:
             return '\n'.join(verbatim_content)
