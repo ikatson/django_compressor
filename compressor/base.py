@@ -69,16 +69,14 @@ class Compressor(object):
 
     def get_filename(self, basename):
         filename = None
-        # first try finding the file in the root
-        if self.storage.exists(basename):
+        if self.finders:
+            filename = self.finders.find(urllib.url2pathname(basename))
+        if not filename and self.storage.exists(basename):
             try:
                 filename = self.storage.path(basename)
             except NotImplementedError:
                 # remote storages don't implement path, access the file locally
                 filename = compressor_file_storage.path(basename)
-        # secondly try to find it with staticfiles (in debug mode)
-        elif self.finders:
-            filename = self.finders.find(urllib.url2pathname(basename))
         if filename:
             return filename
         # or just raise an exception as the last resort
