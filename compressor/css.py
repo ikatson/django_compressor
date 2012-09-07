@@ -1,6 +1,29 @@
+import os.path
+import re
+
 from compressor.base import Compressor, SOURCE_HUNK, SOURCE_FILE
 from compressor.conf import settings
 from compressor.exceptions import UncompressableFileError
+
+from compressor.cache import get_hexdigest, get_mtime
+from compressor.utils.decorators import cached_property
+
+
+def get_lesscss_dependencies(filename, ignore=None):
+    dirname = os.path.dirname(filename)
+    imports = set()
+    with open(filename) as f:
+        for line in f.readlines():
+            match = re.match('\s*@import\s+["\'](.*)[\'"];', line)
+            if match:
+                filename = match.group(1)
+                print filename
+                assert not filename.startswith('/')
+                filename = os.path.join(dirname, filename)
+                imports.add(filename)
+                if ignore and filename not in ignore:
+                    imports |= get_lesscss_dependencies(filename, ignore=imports)
+    return imports
 
 
 class CssCompressor(Compressor):
@@ -12,6 +35,22 @@ class CssCompressor(Compressor):
             output_prefix=output_prefix, context=context)
         self.filters = list(settings.COMPRESS_CSS_FILTERS)
         self.type = output_prefix
+
+    # Method added by Igor Katson
+    @cached_property
+    def mtimes(self):
+        """Calculate mtimes taking all LESS dependencies into consideration."""
+        result = []
+        for kind, value, basename, elem in self.split_contents():
+            if kind != SOURCE_FILE:
+                continue
+            result.append(str(get_mtime(value)))
+            # If the file is LESS, extract mtimes of imports from it
+            # recursively.
+            if value.endswith('.less'):
+               for value in sorted(get_lesscss_dependencies(value)):
+                   result.append(str(get_mtime(value)))
+        return result
 
     def split_contents(self):
         if self.split_content:
