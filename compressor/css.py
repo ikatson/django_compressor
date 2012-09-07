@@ -17,7 +17,6 @@ def get_lesscss_dependencies(filename, ignore=None):
             match = re.match('\s*@import\s+["\'](.*)[\'"];', line)
             if match:
                 filename = match.group(1)
-                print filename
                 assert not filename.startswith('/')
                 filename = os.path.join(dirname, filename)
                 imports.add(filename)
